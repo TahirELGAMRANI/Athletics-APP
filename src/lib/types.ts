@@ -93,33 +93,25 @@ export type Booking = {
   created_at: string;
 };
 
+export type TestResult = { test: string; unit: string | null; trials: (number | null)[]; best: number | null };
+export type TestScore = { label: string; score: number | null; weight: number | null };
+
+/** One athlete's results for one testing session (any battery of tests). */
 export type PhysicalTest = {
   id: string;
   team_id: string;
   player_id: string | null;
   athlete_name: string;
   session_label: string;
+  session_order: number;
   test_date: string | null;
-  beep_stage: number | null;
-  agility_t1: number | null;
-  agility_t2: number | null;
-  illinois_t1: number | null;
-  illinois_t2: number | null;
-  sprint_t1: number | null;
-  sprint_t2: number | null;
-  laps: number | null;
-  best_agility: number | null;
-  best_illinois: number | null;
-  best_sprint: number | null;
-  distance_m: number | null;
-  score_beep: number | null;
-  score_agility: number | null;
-  score_illinois: number | null;
-  score_sprint: number | null;
-  score_distance: number | null;
+  results: TestResult[];
+  scores: TestScore[];
+  method: string | null;
   composite: number | null;
   rank: number | null;
   passed: boolean | null;
+  absent: boolean;
   notes: string | null;
 };
 

@@ -72,13 +72,13 @@ export default function Home() {
       const pid = myPlayers[0].id;
       const [att, test, notes] = await Promise.all([
         supabase.from('attendance').select('status').eq('player_id', pid),
-        supabase.from('physical_tests').select('composite,passed,rank').eq('player_id', pid).order('created_at', { ascending: false }).limit(1),
+        supabase.from('physical_tests').select('composite,passed,rank').eq('player_id', pid).eq('absent', false).order('session_order', { ascending: false }).order('created_at', { ascending: false }).limit(1),
         supabase.from('player_notes').select('body,created_at').eq('player_id', pid).order('created_at', { ascending: false }).limit(1),
       ]);
       const a = att.data ?? [];
       extra.attendance = a.length ? Math.round((a.filter((x) => x.status === 'present').length / a.length) * 100) : null;
       extra.composite = test.data?.[0]?.composite ?? null;
-      extra.passed = test.data?.[0] ? (test.data[0].passed ? 'Pass' : 'Fail') : null;
+      extra.passed = test.data?.[0]?.passed == null ? null : test.data[0].passed ? 'Pass' : 'Fail';
       extra.lastNote = notes.data?.[0]?.body ?? null;
     }
     return { ...fs, teams, upcoming, results, extra };
@@ -159,9 +159,9 @@ export default function Home() {
             </>
           ) : null}
 
-          {perms.isCoach ? (
+          {perms.isCoach || coachedTeamIds.length ? (
             <>
-              <SectionTitle title="My teams" />
+              <SectionTitle title={perms.isCoach ? 'My teams' : 'Teams you coach'} />
               {coachedTeamIds.length === 0 ? (
                 <Card><Empty icon="people-outline" title="No team assigned yet" subtitle="Ask the Athletic Director to assign you a team." /></Card>
               ) : (
