@@ -44,3 +44,7 @@ example
 
 # Vercel
 .vercel
+
+# Store credentials (never commit)
+google-play-service-account.json
+*.p8

@@ -1,6 +1,9 @@
 # AUI Athletics
 
-Internal operations app for the **Al Akhawayn University Athletics Department**. It runs on iOS, Android and the web from one Expo (React Native) codebase, with a Supabase backend (Postgres, Auth, Storage, Edge Functions).
+Internal operations app for the **Al Akhawayn University Athletics Department**.
+
+**Web:** https://aui-athletics.vercel.app · **Publishing to the App Store / Google Play:** see [RELEASE.md](RELEASE.md)
+ It runs on iOS, Android and the web from one Expo (React Native) codebase, with a Supabase backend (Postgres, Auth, Storage, Edge Functions).
 
 ## Sections by role
 
@@ -64,6 +67,7 @@ SQL lives in `supabase/`:
 * `migrations/0003_harden_functions.sql` – security advisor fixes
 * `seed/test_accounts.sql` – the test accounts above
 * `functions/admin-create-user` – Edge Function super admins use to create accounts
+* `functions/delete-account` – Edge Function behind Profile → Delete my account (required by the App Store)
 
 ### Data notes
 

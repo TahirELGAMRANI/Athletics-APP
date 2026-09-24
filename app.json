@@ -8,8 +8,11 @@
     "scheme": "auiathletics",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "ma.aui.athletics"
+      "supportsTablet": false,
+      "bundleIdentifier": "ma.aui.athletics",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "ma.aui.athletics",
@@ -19,7 +22,10 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "single",
@@ -43,13 +49,15 @@
         "expo-image-picker",
         {
           "photosPermission": "Allow AUI Athletics to attach photos of medical records, assessments and contracts.",
-          "cameraPermission": "Allow AUI Athletics to photograph documents for player portfolios."
+          "cameraPermission": "Allow AUI Athletics to photograph documents for player portfolios.",
+          "microphonePermission": false
         }
       ]
     ],
     "experiments": {
       "typedRoutes": false,
       "reactCompiler": true
-    }
+    },
+    "description": "Al Akhawayn University Athletics \u2014 teams, facilities, bookings and athlete performance."
   }
 }
