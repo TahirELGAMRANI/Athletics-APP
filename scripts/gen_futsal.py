@@ -14,7 +14,7 @@ def q(v):
 def j(v): return q(json.dumps(v, ensure_ascii=False)) + '::jsonb'
 
 # results-document spelling -> roster spelling (roster uses the list given by the director)
-ROSTER = {'Hiba Halim': 'Hiba Halym', 'Nourane Hajji': 'Norane Hajji', 'Ghita Adddioui': 'Ghita Addioui'}
+ROSTER = {'Nourane Hajji': 'Norane Hajji', 'Ghita Adddioui': 'Ghita Addioui'}
 def canon(n): return ROSTER.get(n, n)
 
 # ---- Day 1 — Aerobic -------------------------------------------------------

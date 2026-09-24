@@ -5,7 +5,7 @@ select t.id, v.n from (values
   ('Aya Belbasbas'),
   ('Norane Hajji'),
   ('Aya Lemsiah'),
-  ('Hiba Halym'),
+  ('Hiba Halim'),
   ('Imane Ahyane'),
   ('Wiam Lamghari'),
   ('Ghita Addioui'),
