@@ -30,6 +30,14 @@ export default function SignIn() {
           <Txt v="small" color={colors.brand} style={{ fontWeight: '700' }}>Create an account</Txt>
         </Link>
       </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 4 }}>
+        <Link href="/privacy">
+          <Txt v="caption" color={colors.muted}>Privacy policy</Txt>
+        </Link>
+        <Link href="/support">
+          <Txt v="caption" color={colors.muted}>Help & support</Txt>
+        </Link>
+      </View>
     </AuthCard>
   );
 }

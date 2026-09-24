@@ -27,7 +27,7 @@ export default function Portfolio({ playerId, initialTab, selfView }: { playerId
     const player = must(await supabase.from('players').select('*').eq('id', playerId).single()) as Player;
     const [team, tests, docs, notes, kpis, entries, att, fb] = await Promise.all([
       supabase.from('teams').select('*').eq('id', player.team_id).single(),
-      supabase.from('physical_tests').select('*').eq('player_id', playerId).order('created_at'),
+      supabase.from('physical_tests').select('*').eq('player_id', playerId).order('session_order').order('created_at'),
       supabase.from('player_documents').select('*').eq('player_id', playerId).order('created_at', { ascending: false }),
       supabase.from('player_notes').select('*').eq('player_id', playerId).order('created_at', { ascending: false }),
       supabase.from('kpis').select('*').eq('team_id', player.team_id).order('created_at'),
@@ -63,7 +63,7 @@ export default function Portfolio({ playerId, initialTab, selfView }: { playerId
   const canEdit = perms.canManageTeam(player.team_id);
   const present = data.attendance.filter((a) => a.status === 'present').length;
   const rate = data.attendance.length ? Math.round((present / data.attendance.length) * 100) : null;
-  const latest = data.tests[data.tests.length - 1];
+  const latest = data.tests.filter((t) => !t.absent).pop();
 
   const tabs: { value: Tab; label: string }[] = [
     { value: 'overview', label: 'Overview' },
@@ -98,7 +98,13 @@ export default function Portfolio({ playerId, initialTab, selfView }: { playerId
 
       <Row wrap gap={space.md}>
         <Stat label="Attendance rate" value={rate != null ? `${rate}%` : '—'} icon="checkmark-done" tone="success" sub={`${present}/${data.attendance.length} sessions`} />
-        <Stat label="Physical composite" value={latest?.composite != null ? `${Number(latest.composite).toFixed(2)}` : '—'} icon="flash" tone={latest?.passed === false ? 'danger' : 'brand'} sub={latest ? `${latest.passed ? 'Pass' : 'Fail'} · rank ${latest.rank ?? '–'}` : 'No test yet'} />
+        <Stat
+          label="Physical composite"
+          value={latest?.composite != null ? `${Number(latest.composite).toFixed(2)}` : '—'}
+          icon="flash"
+          tone={latest?.passed === false ? 'danger' : 'brand'}
+          sub={latest ? [latest.session_label, latest.passed != null ? (latest.passed ? 'Pass' : 'Fail') : null, latest.rank != null ? `rank ${latest.rank}` : null].filter(Boolean).join(' · ') : 'No test yet'}
+        />
         <Stat label="Documents" value={data.docs.length} icon="folder-open" tone="info" />
       </Row>
 
@@ -250,50 +256,60 @@ function ScoreBar({ label, value }: { label: string; value: number | null }) {
   );
 }
 
+const fmtNum = (v: number | null | undefined) => (v == null ? '—' : String(Number(v)));
+
 function Physical({ tests }: { tests: PhysicalTest[] }) {
   if (!tests.length) {
     return <Card><Empty icon="stopwatch-outline" title="No physical tests yet" /></Card>;
   }
+  const ordered = tests.slice().sort((a, b) => b.session_order - a.session_order || b.session_label.localeCompare(a.session_label));
   return (
     <>
-      {tests
-        .slice()
-        .reverse()
-        .map((t) => (
+      {ordered.map((t) => {
+        const maxTrials = Math.max(1, ...t.results.map((r) => r.trials.length));
+        return (
           <Card key={t.id} style={{ gap: space.md }}>
-            <Row style={{ justifyContent: 'space-between' }}>
-              <View>
+            <Row style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <View style={{ flex: 1 }}>
                 <Txt v="h3">{t.session_label}</Txt>
-                <Txt v="caption" color={colors.muted}>{t.test_date ? fmtDate(t.test_date) : 'Aerobic, agility & sprint assessment'}</Txt>
+                {t.test_date ? <Txt v="caption" color={colors.muted}>{fmtDate(t.test_date)}</Txt> : null}
               </View>
-              <Badge text={t.passed ? 'PASS' : 'FAIL'} tone={t.passed ? 'success' : 'danger'} icon={t.passed ? 'checkmark-circle' : 'close-circle'} />
+              {t.absent ? (
+                <Badge text="ABSENT" tone="neutral" icon="close-circle" />
+              ) : t.passed != null ? (
+                <Badge text={t.passed ? 'PASS' : 'FAIL'} tone={t.passed ? 'success' : 'danger'} icon={t.passed ? 'checkmark-circle' : 'close-circle'} />
+              ) : null}
             </Row>
-            <Row wrap gap={space.md}>
-              <Stat label="Composite" value={t.composite != null ? Number(t.composite).toFixed(2) : '—'} icon="podium" sub="Pass threshold 4.0 / 10" />
-              <Stat label="Team rank" value={t.rank != null ? `#${t.rank}` : '—'} icon="trophy" tone="warning" />
-            </Row>
-            <ScoreBar label="Beep test" value={t.score_beep} />
-            <ScoreBar label="Pro agility (5-10-5)" value={t.score_agility} />
-            <ScoreBar label="Illinois agility" value={t.score_illinois} />
-            <ScoreBar label="30 m sprint" value={t.score_sprint} />
-            <ScoreBar label="Distance (1 min 30 s)" value={t.score_distance} />
-            <Table
-              columns={[
-                { key: 'test', label: 'Test', width: 150 },
-                { key: 't1', label: 'Trial 1', width: 80, align: 'right' },
-                { key: 't2', label: 'Trial 2', width: 80, align: 'right' },
-                { key: 'best', label: 'Best', width: 90, align: 'right' },
-              ]}
-              rows={[
-                { test: 'Beep test (stage)', t1: t.beep_stage != null ? String(t.beep_stage) : '—', t2: '', best: t.beep_stage != null ? String(t.beep_stage) : '—' },
-                { test: 'Pro agility (s)', t1: String(t.agility_t1 ?? '—'), t2: String(t.agility_t2 ?? '—'), best: String(t.best_agility ?? '—') },
-                { test: 'Illinois (s)', t1: String(t.illinois_t1 ?? '—'), t2: String(t.illinois_t2 ?? '—'), best: String(t.best_illinois ?? '—') },
-                { test: '30 m sprint (s)', t1: String(t.sprint_t1 ?? '—'), t2: String(t.sprint_t2 ?? '—'), best: String(t.best_sprint ?? '—') },
-                { test: 'Distance (m)', t1: t.laps != null ? `${t.laps} laps` : '—', t2: '', best: String(t.distance_m ?? '—') },
-              ]}
-            />
+            {t.absent ? (
+              <Txt color={colors.muted}>Did not take part in this testing session.</Txt>
+            ) : (
+              <>
+                <Row wrap gap={space.md}>
+                  <Stat label="Composite" value={t.composite != null ? Number(t.composite).toFixed(2) : '—'} icon="podium" sub="out of 10" />
+                  <Stat label="Team rank" value={t.rank != null ? `#${t.rank}` : '—'} icon="trophy" tone="warning" />
+                </Row>
+                {t.scores.map((s) => (
+                  <ScoreBar key={s.label} label={s.weight != null ? `${s.label} · ${Math.round(s.weight * 100)}%` : s.label} value={s.score} />
+                ))}
+                <Table
+                  columns={[
+                    { key: 'test', label: 'Test', width: 170 },
+                    ...Array.from({ length: maxTrials }, (_, i) => ({ key: `t${i}`, label: maxTrials === 1 ? 'Result' : `Trial ${i + 1}`, width: 76, align: 'right' as const })),
+                    ...(maxTrials > 1 ? [{ key: 'best', label: 'Best', width: 76, align: 'right' as const }] : []),
+                  ]}
+                  rows={t.results.map((r) => {
+                    const row: Record<string, string> = { test: r.unit ? `${r.test} (${r.unit})` : r.test, best: fmtNum(r.best) };
+                    for (let i = 0; i < maxTrials; i++) row[`t${i}`] = fmtNum(r.trials[i]);
+                    return row;
+                  })}
+                />
+              </>
+            )}
+            {t.notes && !t.absent ? <Badge text={t.notes} tone="info" icon="information-circle" /> : null}
+            {t.method ? <Txt v="caption" color={colors.faint}>{t.method}</Txt> : null}
           </Card>
-        ))}
+        );
+      })}
     </>
   );
 }

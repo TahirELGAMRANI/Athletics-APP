@@ -1,9 +1,10 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { Linking, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Avatar, Badge, Button, Card, Field, Row, Screen, SectionTitle, Txt } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
-import { attempt } from '@/lib/hooks';
+import { attempt, confirmAsync } from '@/lib/hooks';
 import { must, supabase } from '@/lib/supabase';
 import { colors, space } from '@/lib/theme';
 import { ROLE_LABEL } from '@/lib/types';
@@ -28,6 +29,20 @@ export default function ProfileScreen() {
       if (error) throw new Error(error.message);
       setPw('');
     }, 'Password changed');
+
+  const deleteAccount = async () => {
+    const ok = await confirmAsync(
+      'Delete your account?',
+      'Your login, profile and bookings are permanently deleted. Team records kept by the athletics office (roster, results, attendance) stay but are no longer linked to you. This cannot be undone.',
+      'Delete account',
+    );
+    if (!ok) return;
+    await attempt(async () => {
+      const { data, error } = await supabase.functions.invoke('delete-account', { body: {} });
+      if (error || (data as { error?: string })?.error) throw new Error((data as { error?: string })?.error ?? error?.message);
+      await signOut();
+    }, 'Your account has been deleted.');
+  };
 
   return (
     <Screen title="Profile" subtitle="Your account">
@@ -61,8 +76,16 @@ export default function ProfileScreen() {
         <Txt v="small" color={colors.muted}>Facilities open 8 AM–11 PM on weekdays and 11 AM–9 PM on weekends.</Txt>
         <Txt v="small" color={colors.brand} style={{ fontWeight: '700' }}>Once a Lion, Always a Lion 🦁</Txt>
       </Card>
-      <Button variant="danger" icon="log-out-outline" title="Sign out" onPress={signOut} />
-      <Button variant="ghost" icon="help-circle-outline" title="Contact the athletics office" onPress={() => Linking.openURL('https://www.aui.ma')} />
+      <Row wrap>
+        <Button variant="ghost" icon="shield-checkmark-outline" title="Privacy policy" onPress={() => router.push('/privacy')} style={{ flex: 1 }} />
+        <Button variant="ghost" icon="help-circle-outline" title="Help & support" onPress={() => router.push('/support')} style={{ flex: 1 }} />
+      </Row>
+      <Button variant="secondary" icon="log-out-outline" title="Sign out" onPress={signOut} />
+      <SectionTitle title="Danger zone" />
+      <Card style={{ gap: space.sm, borderColor: '#F6C9C9' }}>
+        <Txt v="small" color={colors.muted}>Permanently delete your account and personal data.</Txt>
+        <Button variant="danger" icon="trash-outline" title="Delete my account" onPress={deleteAccount} />
+      </Card>
     </Screen>
   );
 }

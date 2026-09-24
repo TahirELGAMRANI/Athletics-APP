@@ -26,7 +26,7 @@ export default function ReportsScreen() {
       q<{ id: string; team_id: string; full_name: string; position: string | null }>(supabase.from('players').select('id,team_id,full_name,position')),
       q<Game>(supabase.from('games').select('*').order('game_date', { ascending: false })),
       q<{ player_id: string; status: string }>(supabase.from('attendance').select('player_id,status')),
-      q<{ team_id: string; player_id: string | null; athlete_name: string; composite: number; passed: boolean; session_label: string }>(supabase.from('physical_tests').select('team_id,player_id,athlete_name,composite,passed,session_label')),
+      q<{ team_id: string; player_id: string | null; athlete_name: string; composite: number | null; passed: boolean | null; absent: boolean; session_label: string }>(supabase.from('physical_tests').select('team_id,player_id,athlete_name,composite,passed,absent,session_label')),
       q<{ team_id: string; rating: number }>(supabase.from('session_feedback').select('team_id,rating')),
       q<{ id: string; name: string; category: string | null; president: string | null }>(supabase.from('clubs').select('*').order('name')),
       q<{ club_id: string; full_name: string; role: string }>(supabase.from('club_members').select('club_id,full_name,role')),
@@ -64,7 +64,8 @@ export default function ReportsScreen() {
       const t = data.teams.find((x) => x.id === target) ?? data.teams[0];
       if (!t) return null;
       const s = teamStats(t);
-      const tests = data.tests.filter((x) => x.team_id === t.id);
+      const tests = data.tests.filter((x) => x.team_id === t.id && !x.absent);
+      const graded = tests.filter((x) => x.passed != null);
       return {
         title: `${t.name} — Team report`,
         stats: [
@@ -72,7 +73,7 @@ export default function ReportsScreen() {
           { label: 'Record (W-D-L)', value: `${s.w}-${s.d}-${s.l}` },
           { label: 'Attendance', value: s.att },
           { label: 'Training rating', value: `${s.rating} / 5` },
-          { label: 'Physical pass rate', value: pct(tests.filter((x) => x.passed).length, tests.length) },
+          { label: 'Physical pass rate', value: graded.length ? pct(graded.filter((x) => x.passed).length, graded.length) : 'n/a' },
           { label: 'Expenses', value: money(s.spend) },
         ],
         sections: [
@@ -85,7 +86,7 @@ export default function ReportsScreen() {
               return [p.full_name, p.position ?? '', c('present'), c('absent'), c('excused'), pct(c('present'), a.length)];
             }),
           },
-          { title: 'Physical testing', columns: ['Athlete', 'Session', 'Composite', 'Result'], rows: tests.sort((a, b) => b.composite - a.composite).map((x) => [x.athlete_name, x.session_label, Number(x.composite).toFixed(2), x.passed ? 'Pass' : 'Fail']) },
+          { title: 'Physical testing', columns: ['Athlete', 'Session', 'Composite', 'Result'], rows: tests.sort((a, b) => a.session_label.localeCompare(b.session_label) || Number(b.composite) - Number(a.composite)).map((x) => [x.athlete_name, x.session_label, x.composite != null ? Number(x.composite).toFixed(2) : '—', x.passed == null ? '' : x.passed ? 'Pass' : 'Fail']) },
           { title: 'Games', columns: ['Date', 'Opponent', 'Type', 'Score'], rows: data.games.filter((g) => g.team_id === t.id).map((g) => [g.game_date, g.opponent, g.game_type, g.status === 'completed' ? `${g.our_score}-${g.their_score}` : g.status]) },
         ],
       };

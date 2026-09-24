@@ -240,10 +240,14 @@ function Performance({
 }) {
   const [kpiForm, setKpiForm] = useState(false);
   const [k, setK] = useState({ name: '', unit: '', target: '', higher: true });
-  const sessions = Array.from(new Set(tests.map((t) => t.session_label)));
+  const sessions = Array.from(new Set(tests.slice().sort((a, b) => a.session_order - b.session_order).map((t) => t.session_label)));
   const [session, setSession] = useState(sessions[sessions.length - 1]);
-  const shown = tests.filter((t) => t.session_label === session).sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99));
-  const passCount = shown.filter((t) => t.passed).length;
+  const shown = tests.filter((t) => t.session_label === session).sort((a, b) => (a.absent ? 1 : 0) - (b.absent ? 1 : 0) || (a.rank ?? 99) - (b.rank ?? 99));
+  const tested = shown.filter((t) => !t.absent);
+  const hasPass = tested.some((t) => t.passed != null);
+  const passCount = tested.filter((t) => t.passed).length;
+  const scoreLabels = Array.from(new Set(tested.flatMap((t) => t.scores.map((x) => x.label))));
+  const method = shown.find((t) => t.method)?.method;
 
   const saveKpi = () =>
     attempt(async () => {
@@ -257,47 +261,45 @@ function Performance({
 
   return (
     <>
-      <SectionTitle title="Physical testing" subtitle="Composite = average of 5 scores (20% each) · pass ≥ 4.0 / 10" />
+      <SectionTitle title="Physical testing" subtitle={method ?? undefined} />
       {tests.length === 0 ? (
         <Card><Empty icon="stopwatch-outline" title="No physical tests yet" /></Card>
       ) : (
         <>
           {sessions.length > 1 ? <Chips value={session} onChange={setSession} options={sessions.map((s) => ({ value: s, label: s }))} /> : null}
           <Row wrap gap={space.md}>
-            <Stat label="Athletes tested" value={shown.length} icon="people" />
-            <Stat label="Passed" value={`${passCount}/${shown.length}`} icon="checkmark-circle" tone="success" />
-            <Stat label="Team average" value={(shown.reduce((s, t) => s + Number(t.composite ?? 0), 0) / (shown.length || 1)).toFixed(2)} icon="podium" tone="info" />
+            <Stat label="Athletes tested" value={tested.length} icon="people" sub={shown.length > tested.length ? `${shown.length - tested.length} absent` : undefined} />
+            {hasPass ? <Stat label="Passed" value={`${passCount}/${tested.length}`} icon="checkmark-circle" tone="success" /> : null}
+            <Stat label="Team average" value={(tested.reduce((s, t) => s + Number(t.composite ?? 0), 0) / (tested.length || 1)).toFixed(2)} icon="podium" tone="info" />
           </Row>
           <Card padded={false} style={{ overflow: 'hidden' }}>
             <Table
               onRowPress={(i) => shown[i].player_id && router.push({ pathname: '/players/[id]', params: { id: shown[i].player_id!, tab: 'physical' } })}
               columns={[
                 { key: 'rank', label: '#', width: 44, align: 'center' },
-                { key: 'name', label: 'Athlete', width: 150 },
-                { key: 'beep', label: 'Beep', width: 70, align: 'right' },
-                { key: 'agi', label: 'Agility', width: 74, align: 'right' },
-                { key: 'ill', label: 'Illinois', width: 74, align: 'right' },
-                { key: 'spr', label: 'Sprint', width: 70, align: 'right' },
-                { key: 'dist', label: 'Distance', width: 80, align: 'right' },
+                { key: 'name', label: 'Athlete', width: 160 },
+                ...scoreLabels.map((l) => ({ key: `s:${l}`, label: l, width: 78, align: 'right' as const })),
                 { key: 'comp', label: 'Composite', width: 96, align: 'right' },
-                { key: 'res', label: 'Result', width: 80, align: 'center' },
+                ...(hasPass || tested.length < shown.length ? [{ key: 'res', label: 'Result', width: 84, align: 'center' as const }] : []),
               ]}
-              rows={shown.map((t) => ({
-                rank: String(t.rank ?? '–'),
-                name: (
-                  <View>
-                    <Text style={{ fontWeight: '700', fontSize: 13, color: colors.text }}>{t.athlete_name}</Text>
-                    {!t.player_id ? <Text style={{ fontSize: 11, color: colors.faint }}>not on roster</Text> : null}
-                  </View>
-                ),
-                beep: Number(t.score_beep ?? 0).toFixed(2),
-                agi: Number(t.score_agility ?? 0).toFixed(2),
-                ill: Number(t.score_illinois ?? 0).toFixed(2),
-                spr: Number(t.score_sprint ?? 0).toFixed(2),
-                dist: Number(t.score_distance ?? 0).toFixed(2),
-                comp: <Text style={{ fontWeight: '800', textAlign: 'right', color: colors.brandDark }}>{Number(t.composite ?? 0).toFixed(2)}</Text>,
-                res: <Badge text={t.passed ? 'Pass' : 'Fail'} tone={t.passed ? 'success' : 'danger'} />,
-              }))}
+              rows={shown.map((t) => {
+                const row: Record<string, React.ReactNode> = {
+                  rank: t.absent ? '—' : String(t.rank ?? '–'),
+                  name: (
+                    <View>
+                      <Text style={{ fontWeight: '700', fontSize: 13, color: colors.text }}>{t.athlete_name}</Text>
+                      {!t.player_id ? <Text style={{ fontSize: 11, color: colors.faint }}>not on roster</Text> : null}
+                    </View>
+                  ),
+                  comp: t.absent ? '—' : <Text style={{ fontWeight: '800', textAlign: 'right', color: colors.brandDark }}>{Number(t.composite ?? 0).toFixed(2)}</Text>,
+                  res: t.absent ? <Badge text="Absent" /> : t.passed != null ? <Badge text={t.passed ? 'Pass' : 'Fail'} tone={t.passed ? 'success' : 'danger'} /> : '',
+                };
+                for (const l of scoreLabels) {
+                  const v = t.scores.find((x) => x.label === l)?.score;
+                  row[`s:${l}`] = t.absent ? '—' : v == null ? 'n/a' : Number(v).toFixed(2);
+                }
+                return row;
+              })}
             />
           </Card>
         </>
