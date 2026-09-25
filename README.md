@@ -5,6 +5,10 @@ Internal operations app for the **Al Akhawayn University Athletics Department**.
 **Web:** https://aui-athletics.vercel.app · **Publishing to the App Store / Google Play:** see [RELEASE.md](RELEASE.md)
  It runs on iOS, Android and the web from one Expo (React Native) codebase, with a Supabase backend (Postgres, Auth, Storage, Edge Functions).
 
+## Volleyball Stats app
+
+A separate, offline, stats-only app lives in [`stats-app/`](stats-app/README.md): tap-only match stat entry with an NCAA-style box score and PDF/CSV report.
+
 ## Sections by role
 
 | Section | Super Admin | Inventory staff (Admin) | Coach | Player | Student |

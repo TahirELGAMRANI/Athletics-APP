@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "AUI Volleyball Stats",
+    "slug": "aui-volleyball-stats",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "scheme": "auivbstats",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ma.aui.volleyballstats",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "ma.aui.volleyballstats"
+    },
+    "web": {
+      "output": "single",
+      "favicon": "./assets/favicon.png",
+      "name": "AUI Volleyball Stats",
+      "shortName": "VB Stats",
+      "themeColor": "#1B5E32",
+      "backgroundColor": "#FFFFFF"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": false
+    },
+    "description": "Tap-only volleyball statistics with NCAA-style box score reports."
+  }
+}
